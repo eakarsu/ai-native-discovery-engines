@@ -1,0 +1,7 @@
+export interface User { id: number; email: string; name: string; role: string; }
+export interface Project { id: number; name: string; domain: string; goal: string; status: string; lead_researcher: string; start_date: string; iteration_count: number; breakthrough_count: number; }
+export interface Hypothesis { id: number; project_id: number; project_name?: string; domain?: string; statement: string; confidence_score: number; status: string; supporting_evidence: string; contradicting_evidence: string; generated_by: string; created_at: string; }
+export interface Experiment { id: number; hypothesis_id: number; hypothesis_statement?: string; title: string; design: string; methodology: string; status: string; started_at: string | null; completed_at: string | null; result_summary: string; }
+export interface Result { id: number; experiment_id: number; experiment_title?: string; outcome: string; significance_pct: number; breakthrough: boolean; data_summary: string; conclusion: string; published: boolean; published_at: string | null; }
+export interface Researcher { id: number; name: string; institution: string; specialization: string; h_index: number; email: string; active_projects: number; publications_count: number; joined_date: string; }
+export interface Publication { id: number; project_id: number; project_name?: string; title: string; journal: string; status: string; impact_factor: number; submitted_at: string | null; accepted_at: string | null; authors: string; }
