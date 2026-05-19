@@ -45,6 +45,9 @@ app.use('/api/web-crawl', require('./routes/web-crawl'));
 app.use('/api/benchmark-eval', require('./routes/benchmark-eval'));
 app.use('/api/discovery-agent', require('./routes/discovery-agent'));
 
+// Custom Views — AI-native enterprise discovery (2 viz + 2 non-viz)
+app.use('/api/custom-views', require('./routes/customViews'));
+
 app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(500).json({ error: 'Internal server error' });

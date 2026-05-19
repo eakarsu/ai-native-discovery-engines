@@ -19,6 +19,7 @@ import CitationTracker from './pages/CitationTracker';
 import WebCrawl from './pages/WebCrawl';
 import BenchmarkEval from './pages/BenchmarkEval';
 import DiscoveryAgent from './pages/DiscoveryAgent';
+import CustomViewsPage from './pages/CustomViewsPage';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const token = localStorage.getItem('token');
@@ -53,6 +54,7 @@ export default function App() {
                 <Route path="/web-crawl" element={<WebCrawl />} />
                 <Route path="/benchmark-eval" element={<BenchmarkEval />} />
                 <Route path="/discovery-agent" element={<DiscoveryAgent />} />
+                <Route path="/custom-views" element={<CustomViewsPage />} />
               </Routes>
             </Layout>
           </PrivateRoute>

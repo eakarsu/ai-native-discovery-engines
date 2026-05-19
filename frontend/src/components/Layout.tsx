@@ -1,5 +1,5 @@
 import { useNavigate, useLocation, Link } from 'react-router-dom';
-import { FlaskConical, Beaker, Microscope, BarChart2, Users, BookOpen, Sparkles, LogOut, User, Search, Activity, Download, Database, LayoutDashboard, Globe, Quote, Trophy, Bot, Layers } from 'lucide-react';
+import { FlaskConical, Beaker, Microscope, BarChart2, Users, BookOpen, Sparkles, LogOut, User, Search, Activity, Download, Database, LayoutDashboard, Globe, Quote, Trophy, Bot, Layers, Compass } from 'lucide-react';
 
 const navItems = [
   { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -11,6 +11,9 @@ const navItems = [
   { path: '/publications', label: 'Publications', icon: BookOpen },
 ];
 const aiItems = [{ path: '/ai-center', label: 'AI Center', icon: Sparkles }];
+const discoveryViewItems = [
+  { path: '/custom-views', label: 'Discovery Views', icon: Compass },
+];
 const retrievalItems = [
   { path: '/corpus-index', label: 'Corpus Index', icon: Database },
   { path: '/hybrid-retrieval', label: 'Hybrid Retrieval', icon: Layers },
@@ -33,7 +36,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   const logout = () => { localStorage.removeItem('token'); localStorage.removeItem('user'); navigate('/login'); };
-  const pageTitle = [...navItems, ...aiItems, ...retrievalItems, ...utilityItems, ...adminItems].find(i => location.pathname.startsWith(i.path))?.label || 'DiscoverAI';
+  const pageTitle = [...navItems, ...aiItems, ...discoveryViewItems, ...retrievalItems, ...utilityItems, ...adminItems].find(i => location.pathname.startsWith(i.path))?.label || 'DiscoverAI';
 
   return (
     <div className="flex h-screen bg-gray-50">
@@ -59,6 +62,12 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider px-3 mb-2 mt-4">AI Tools</div>
           {aiItems.map(({ path, label, icon: Icon }) => (
             <Link key={path} to={path} className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium mb-1 transition-colors ${location.pathname.startsWith(path) ? 'bg-violet-600 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white'}`}>
+              <Icon className="w-4 h-4 flex-shrink-0" />{label}
+            </Link>
+          ))}
+          <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider px-3 mb-2 mt-4">Discovery Views</div>
+          {discoveryViewItems.map(({ path, label, icon: Icon }) => (
+            <Link key={path} to={path} className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium mb-1 transition-colors ${location.pathname.startsWith(path) ? 'bg-fuchsia-600 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white'}`}>
               <Icon className="w-4 h-4 flex-shrink-0" />{label}
             </Link>
           ))}
