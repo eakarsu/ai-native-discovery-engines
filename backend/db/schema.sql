@@ -99,3 +99,215 @@ CREATE TABLE activity_log (
   created_at TIMESTAMP DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_activity_log_created_at ON activity_log(created_at DESC);
+
+-- ============================================================================
+-- AI-NATIVE DISCOVERY ENGINES — RETRIEVAL / SEARCH-ENGINE LAYER
+-- Audit-implementation deep-pass: 2026-05-14
+-- ============================================================================
+
+-- Scientific corpora the engine indexes (arXiv, PubMed, bioRxiv, ChemRxiv, etc.)
+CREATE TABLE IF NOT EXISTS corpora (
+  id SERIAL PRIMARY KEY,
+  slug VARCHAR(64) UNIQUE NOT NULL,
+  name VARCHAR(255) NOT NULL,
+  domain VARCHAR(100),
+  source_url VARCHAR(500),
+  license VARCHAR(100),
+  doc_count BIGINT DEFAULT 0,
+  last_crawled_at TIMESTAMP,
+  embedding_model VARCHAR(100),
+  dim INTEGER DEFAULT 1024,
+  notes TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_corpora_domain ON corpora(domain);
+
+-- Individual documents within a corpus. Real-world: arXiv paper, PubMed abstract.
+CREATE TABLE IF NOT EXISTS corpus_documents (
+  id SERIAL PRIMARY KEY,
+  corpus_id INTEGER REFERENCES corpora(id) ON DELETE CASCADE,
+  external_id VARCHAR(128),
+  doi VARCHAR(128),
+  title TEXT NOT NULL,
+  abstract TEXT,
+  authors TEXT,
+  venue VARCHAR(255),
+  year INTEGER,
+  url VARCHAR(500),
+  tokens INTEGER DEFAULT 0,
+  citation_count INTEGER DEFAULT 0,
+  has_embedding BOOLEAN DEFAULT FALSE,
+  bm25_doc_len INTEGER DEFAULT 0,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_corpus_documents_corpus ON corpus_documents(corpus_id);
+CREATE INDEX IF NOT EXISTS idx_corpus_documents_year ON corpus_documents(year DESC);
+CREATE INDEX IF NOT EXISTS idx_corpus_documents_doi ON corpus_documents(doi);
+
+-- ============================================================================
+-- Hybrid retrieval — queries, candidate sets, fused rankings
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS retrieval_queries (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  query_text TEXT NOT NULL,
+  corpus_slug VARCHAR(64),
+  retriever VARCHAR(50),
+  reranker_model VARCHAR(100),
+  alpha DECIMAL(3,2) DEFAULT 0.5,
+  top_k INTEGER DEFAULT 10,
+  latency_ms INTEGER,
+  total_candidates INTEGER,
+  ndcg_at_10 DECIMAL(5,4),
+  created_at TIMESTAMP DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_retrieval_queries_user ON retrieval_queries(user_id);
+CREATE INDEX IF NOT EXISTS idx_retrieval_queries_created ON retrieval_queries(created_at DESC);
+
+CREATE TABLE IF NOT EXISTS retrieval_results (
+  id SERIAL PRIMARY KEY,
+  query_id INTEGER REFERENCES retrieval_queries(id) ON DELETE CASCADE,
+  document_id INTEGER REFERENCES corpus_documents(id) ON DELETE CASCADE,
+  rank INTEGER,
+  bm25_score DECIMAL(8,4),
+  dense_score DECIMAL(8,4),
+  fused_score DECIMAL(8,4),
+  rerank_score DECIMAL(8,4),
+  snippet TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_retrieval_results_query ON retrieval_results(query_id);
+
+-- ============================================================================
+-- Citation / provenance graph — every claim in an LLM answer maps back to docs
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS answers (
+  id SERIAL PRIMARY KEY,
+  query_id INTEGER REFERENCES retrieval_queries(id) ON DELETE SET NULL,
+  user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  question TEXT,
+  answer_text TEXT,
+  generator_model VARCHAR(100),
+  groundedness DECIMAL(4,3),
+  hallucination_risk DECIMAL(4,3),
+  created_at TIMESTAMP DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_answers_query ON answers(query_id);
+
+CREATE TABLE IF NOT EXISTS citations (
+  id SERIAL PRIMARY KEY,
+  answer_id INTEGER REFERENCES answers(id) ON DELETE CASCADE,
+  document_id INTEGER REFERENCES corpus_documents(id) ON DELETE CASCADE,
+  claim_text TEXT,
+  span_start INTEGER,
+  span_end INTEGER,
+  support_score DECIMAL(4,3),
+  contradicts BOOLEAN DEFAULT FALSE
+);
+CREATE INDEX IF NOT EXISTS idx_citations_answer ON citations(answer_id);
+CREATE INDEX IF NOT EXISTS idx_citations_document ON citations(document_id);
+
+-- ============================================================================
+-- Live web crawl — Tavily / Exa / Brave / You.com ingestion
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS web_crawls (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  provider VARCHAR(40),
+  query TEXT NOT NULL,
+  freshness_days INTEGER,
+  domain_filter TEXT,
+  results_count INTEGER DEFAULT 0,
+  cost_usd DECIMAL(8,5),
+  latency_ms INTEGER,
+  ingested_to_corpus_id INTEGER REFERENCES corpora(id) ON DELETE SET NULL,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_web_crawls_provider ON web_crawls(provider);
+CREATE INDEX IF NOT EXISTS idx_web_crawls_created ON web_crawls(created_at DESC);
+
+CREATE TABLE IF NOT EXISTS web_crawl_results (
+  id SERIAL PRIMARY KEY,
+  crawl_id INTEGER REFERENCES web_crawls(id) ON DELETE CASCADE,
+  rank INTEGER,
+  url VARCHAR(700) NOT NULL,
+  title TEXT,
+  snippet TEXT,
+  published_date DATE,
+  score DECIMAL(5,4),
+  raw_content_tokens INTEGER,
+  imported_doc_id INTEGER REFERENCES corpus_documents(id) ON DELETE SET NULL
+);
+CREATE INDEX IF NOT EXISTS idx_web_crawl_results_crawl ON web_crawl_results(crawl_id);
+
+-- ============================================================================
+-- BEIR / MTEB / SciFact / NFCorpus benchmark runs against the retrieval stack
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS benchmarks (
+  id SERIAL PRIMARY KEY,
+  slug VARCHAR(64) UNIQUE NOT NULL,
+  name VARCHAR(255) NOT NULL,
+  suite VARCHAR(50),
+  domain VARCHAR(80),
+  task_type VARCHAR(40),
+  num_queries INTEGER,
+  num_docs INTEGER,
+  primary_metric VARCHAR(30) DEFAULT 'ndcg@10',
+  description TEXT
+);
+
+CREATE TABLE IF NOT EXISTS benchmark_runs (
+  id SERIAL PRIMARY KEY,
+  benchmark_id INTEGER REFERENCES benchmarks(id) ON DELETE CASCADE,
+  retriever VARCHAR(100),
+  embedding_model VARCHAR(100),
+  reranker_model VARCHAR(100),
+  alpha DECIMAL(3,2),
+  ndcg_at_10 DECIMAL(5,4),
+  recall_at_100 DECIMAL(5,4),
+  mrr DECIMAL(5,4),
+  map_score DECIMAL(5,4),
+  latency_p50_ms INTEGER,
+  latency_p95_ms INTEGER,
+  cost_per_1k_usd DECIMAL(7,4),
+  ran_at TIMESTAMP DEFAULT NOW(),
+  notes TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_benchmark_runs_benchmark ON benchmark_runs(benchmark_id);
+CREATE INDEX IF NOT EXISTS idx_benchmark_runs_ndcg ON benchmark_runs(ndcg_at_10 DESC);
+
+-- ============================================================================
+-- Closed-loop discovery agent — retrieves, proposes hypothesis, cycles
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS discovery_sessions (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  project_id INTEGER REFERENCES projects(id) ON DELETE SET NULL,
+  goal TEXT NOT NULL,
+  status VARCHAR(20) DEFAULT 'running',
+  iterations_planned INTEGER DEFAULT 3,
+  iterations_done INTEGER DEFAULT 0,
+  proposed_hypothesis TEXT,
+  novelty_score DECIMAL(4,3),
+  groundedness_score DECIMAL(4,3),
+  total_tokens INTEGER DEFAULT 0,
+  total_cost_usd DECIMAL(8,5),
+  created_at TIMESTAMP DEFAULT NOW(),
+  completed_at TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_discovery_sessions_user ON discovery_sessions(user_id);
+CREATE INDEX IF NOT EXISTS idx_discovery_sessions_project ON discovery_sessions(project_id);
+
+CREATE TABLE IF NOT EXISTS discovery_steps (
+  id SERIAL PRIMARY KEY,
+  session_id INTEGER REFERENCES discovery_sessions(id) ON DELETE CASCADE,
+  step_number INTEGER,
+  step_type VARCHAR(40),
+  input TEXT,
+  output TEXT,
+  retriever_query_id INTEGER REFERENCES retrieval_queries(id) ON DELETE SET NULL,
+  answer_id INTEGER REFERENCES answers(id) ON DELETE SET NULL,
+  tokens_used INTEGER,
+  duration_ms INTEGER,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_discovery_steps_session ON discovery_steps(session_id);
+

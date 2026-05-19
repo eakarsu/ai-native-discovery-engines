@@ -36,6 +36,18 @@ app.use('/api/cf-auto-authorship', require('./routes/cf-auto-authorship'));
 app.use('/api/cf-self-driving-lab', require('./routes/cf-self-driving-lab'));
 app.use('/api/cf-eln-export', require('./routes/cf-eln-export'));
 app.use('/api/cf-cross-lab-federation', require('./routes/cf-cross-lab-federation'));
+
+// Audit deep-pass (2026-05-14): retrieval / search-engine layer
+app.use('/api/corpus-index', require('./routes/corpus-index'));
+app.use('/api/hybrid-retrieval', require('./routes/hybrid-retrieval'));
+app.use('/api/citation-tracker', require('./routes/citation-tracker'));
+app.use('/api/web-crawl', require('./routes/web-crawl'));
+app.use('/api/benchmark-eval', require('./routes/benchmark-eval'));
+app.use('/api/discovery-agent', require('./routes/discovery-agent'));
+
+// Custom Views — AI-native enterprise discovery (2 viz + 2 non-viz)
+app.use('/api/custom-views', require('./routes/customViews'));
+
 app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(500).json({ error: 'Internal server error' });
