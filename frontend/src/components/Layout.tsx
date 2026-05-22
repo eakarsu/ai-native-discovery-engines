@@ -21,6 +21,7 @@ const retrievalItems = [
   { path: '/web-crawl', label: 'Live Web Crawl', icon: Globe },
   { path: '/benchmark-eval', label: 'Benchmark Eval', icon: Trophy },
   { path: '/discovery-agent', label: 'Discovery Agent', icon: Bot },
+  { path: '/query-drift-monitor', label: 'Query Drift', icon: Activity },
 ];
 const utilityItems = [
   { path: '/search', label: 'Search & Filter', icon: Search },

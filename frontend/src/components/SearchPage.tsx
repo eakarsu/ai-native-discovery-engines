@@ -1,33 +1,47 @@
 import { useState } from 'react';
-import { Search as SearchIcon } from 'lucide-react';
+import { Search as SearchIcon, ChevronLeft, ChevronRight } from 'lucide-react';
 import { api } from '../api';
 
 const ENTITY_OPTIONS = ['', 'projects', 'hypotheses', 'experiments', 'results', 'publications', 'researchers'];
+const PAGE_SIZE = 25;
 
 export default function SearchPage() {
   const [q, setQ] = useState('');
   const [entity, setEntity] = useState('');
   const [status, setStatus] = useState('');
   const [domain, setDomain] = useState('');
+  const [offset, setOffset] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [results, setResults] = useState<any>(null);
 
-  const run = async (e?: React.FormEvent) => {
+  const run = async (e?: React.FormEvent, nextOffset = 0) => {
     if (e) e.preventDefault();
     setLoading(true); setError(''); setResults(null);
     try {
-      const data = await api.search({ q, entity: entity || undefined, status: status || undefined, domain: domain || undefined, limit: 50 });
+      const data = await api.search({
+        q,
+        entity: entity || undefined,
+        status: status || undefined,
+        domain: domain || undefined,
+        limit: PAGE_SIZE,
+        offset: nextOffset,
+      });
       setResults(data);
+      setOffset(nextOffset);
     } catch (err: any) { setError(err.message || 'Search failed'); }
     finally { setLoading(false); }
   };
 
-  const renderSection = (title: string, rows: any[], cols: string[]) => {
+  const prevPage = () => { const n = Math.max(0, offset - PAGE_SIZE); run(undefined, n); };
+  const nextPage = () => { const n = offset + PAGE_SIZE; run(undefined, n); };
+
+  const renderSection = (title: string, rows: any[], cols: string[], total?: number) => {
     if (!rows || rows.length === 0) return null;
+    const totalLabel = typeof total === 'number' && total !== rows.length ? `${rows.length} of ${total}` : `${rows.length}`;
     return (
       <div className="bg-white rounded-xl border border-gray-200 mb-4 overflow-hidden">
-        <div className="px-4 py-3 bg-gray-50 border-b border-gray-200 font-semibold text-gray-800 capitalize">{title} <span className="text-gray-500 font-normal">({rows.length})</span></div>
+        <div className="px-4 py-3 bg-gray-50 border-b border-gray-200 font-semibold text-gray-800 capitalize">{title} <span className="text-gray-500 font-normal">({totalLabel})</span></div>
         <table className="w-full">
           <thead><tr className="bg-white border-b border-gray-100">{cols.map(c => <th key={c} className="px-4 py-2 text-left text-xs font-semibold text-gray-500 uppercase">{c}</th>)}</tr></thead>
           <tbody className="divide-y divide-gray-100">
@@ -42,6 +56,10 @@ export default function SearchPage() {
     );
   };
 
+  const grandTotal = results?.pagination?.grand_total ?? 0;
+  const totals = results?.pagination?.totals || {};
+  const hasMore = grandTotal > 0 && (offset + PAGE_SIZE) < grandTotal;
+
   return (
     <div className="p-6">
       <div className="mb-6">
@@ -49,12 +67,12 @@ export default function SearchPage() {
           <div className="w-10 h-10 bg-indigo-100 rounded-xl flex items-center justify-center"><SearchIcon className="w-6 h-6 text-indigo-600" /></div>
           <div>
             <h2 className="text-2xl font-bold text-gray-900">Search & Filter</h2>
-            <p className="text-gray-500 text-sm">Cross-entity full-text search across the discovery engine</p>
+            <p className="text-gray-500 text-sm">Cross-entity full-text search across the discovery engine (paginated, {PAGE_SIZE}/page per entity)</p>
           </div>
         </div>
       </div>
 
-      <form onSubmit={run} className="bg-white border border-gray-200 rounded-xl p-4 mb-6 grid grid-cols-1 md:grid-cols-5 gap-3">
+      <form onSubmit={(e) => run(e, 0)} className="bg-white border border-gray-200 rounded-xl p-4 mb-6 grid grid-cols-1 md:grid-cols-5 gap-3">
         <div className="md:col-span-2">
           <label className="block text-xs font-medium text-gray-600 mb-1">Query</label>
           <input autoFocus value={q} onChange={e => setQ(e.target.value)} placeholder="Search projects, hypotheses, experiments…" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
@@ -82,12 +100,21 @@ export default function SearchPage() {
 
       {results && (
         <div>
-          {renderSection('projects', results.results?.projects || [], ['id', 'name', 'domain', 'status', 'lead_researcher'])}
-          {renderSection('hypotheses', results.results?.hypotheses || [], ['id', 'project_id', 'statement', 'status', 'confidence_score'])}
-          {renderSection('experiments', results.results?.experiments || [], ['id', 'hypothesis_id', 'title', 'status'])}
-          {renderSection('results', results.results?.results || [], ['id', 'experiment_id', 'outcome', 'significance_pct', 'breakthrough'])}
-          {renderSection('publications', results.results?.publications || [], ['id', 'project_id', 'title', 'journal', 'status', 'impact_factor'])}
-          {renderSection('researchers', results.results?.researchers || [], ['id', 'name', 'institution', 'specialization', 'h_index'])}
+          {grandTotal > 0 && (
+            <div className="flex items-center justify-between mb-3 text-sm text-gray-600">
+              <div>Grand total: <span className="font-medium text-gray-900">{grandTotal}</span> · page offset <span className="font-medium text-gray-900">{offset}</span></div>
+              <div className="flex items-center gap-2">
+                <button onClick={prevPage} disabled={offset === 0 || loading} className="px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-sm disabled:opacity-40 flex items-center gap-1"><ChevronLeft className="w-4 h-4" />Prev</button>
+                <button onClick={nextPage} disabled={!hasMore || loading} className="px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-sm disabled:opacity-40 flex items-center gap-1">Next<ChevronRight className="w-4 h-4" /></button>
+              </div>
+            </div>
+          )}
+          {renderSection('projects', results.results?.projects || [], ['id', 'name', 'domain', 'status', 'lead_researcher'], totals.projects)}
+          {renderSection('hypotheses', results.results?.hypotheses || [], ['id', 'project_id', 'statement', 'status', 'confidence_score'], totals.hypotheses)}
+          {renderSection('experiments', results.results?.experiments || [], ['id', 'hypothesis_id', 'title', 'status'], totals.experiments)}
+          {renderSection('results', results.results?.results || [], ['id', 'experiment_id', 'outcome', 'significance_pct', 'breakthrough'], totals.results)}
+          {renderSection('publications', results.results?.publications || [], ['id', 'project_id', 'title', 'journal', 'status', 'impact_factor'], totals.publications)}
+          {renderSection('researchers', results.results?.researchers || [], ['id', 'name', 'institution', 'specialization', 'h_index'], totals.researchers)}
           {Object.values(results.results || {}).every((arr: any) => !arr || arr.length === 0) && (
             <div className="bg-white border border-gray-200 rounded-xl p-8 text-center text-gray-400">No matches.</div>
           )}

@@ -47,6 +47,7 @@ app.use('/api/discovery-agent', require('./routes/discovery-agent'));
 
 // Custom Views — AI-native enterprise discovery (2 viz + 2 non-viz)
 app.use('/api/custom-views', require('./routes/customViews'));
+app.use('/api/query-drift-monitor', require('./routes/queryDriftMonitor'));
 
 app.use((err, req, res, next) => {
   console.error(err.stack);

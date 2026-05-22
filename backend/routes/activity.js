@@ -14,17 +14,35 @@ async function tableExists() {
 
 router.get('/', async (req, res) => {
   try {
-    if (!(await tableExists())) return res.json([]);
+    if (!(await tableExists())) {
+      res.set('X-Total-Count', '0');
+      return res.json([]);
+    }
     const limit = Math.min(parseInt(req.query.limit, 10) || 100, 500);
+    const offset = Math.max(parseInt(req.query.offset, 10) || 0, 0);
     const action = req.query.action;
     const entity_type = req.query.entity_type;
+    const paginated = req.query.paginated === '1' || req.query.paginated === 'true';
     const conds = [];
     const args = [];
-    if (action) { args.push(action); conds.push(`action = $${args.length}`); }
+    if (action) { args.push(`%${action}%`); conds.push(`action ILIKE $${args.length}`); }
     if (entity_type) { args.push(entity_type); conds.push(`entity_type = $${args.length}`); }
     const where = conds.length ? `WHERE ${conds.join(' AND ')}` : '';
+
+    // total count for pagination
+    const countRes = await pool.query(`SELECT COUNT(*)::int AS c FROM activity_log ${where}`, args);
+    const total = countRes.rows[0]?.c || 0;
+
     args.push(limit);
-    const r = await pool.query(`SELECT * FROM activity_log ${where} ORDER BY created_at DESC, id DESC LIMIT $${args.length}`, args);
+    args.push(offset);
+    const r = await pool.query(
+      `SELECT * FROM activity_log ${where} ORDER BY created_at DESC, id DESC LIMIT $${args.length - 1} OFFSET $${args.length}`,
+      args
+    );
+    res.set('X-Total-Count', String(total));
+    if (paginated) {
+      return res.json({ items: r.rows, total, limit, offset });
+    }
     res.json(r.rows);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });

@@ -134,3 +134,89 @@ Full per-step detail: `/Users/erolakarsu/projects/_AUDIT/apply3_logs/dashboard_a
 - **NEEDS-PRODUCT-DECISION** — pagination on `/activity` and `/search` (currently capped per-entity).
 - **TOO-RISKY** — refactoring `schema.sql` to be non-destructive on boot. Project-wide convention.
 - Additional AI tools from the candidate list not implemented this pass: citation network insight, dataset-quality assessor, IP/patent landscape briefer, anomaly detector. Trivial to add following the same pattern.
+
+## Apply pass 7 (full backlog implementation)
+
+Implemented all three unaddressed backlog items above (skipping only the TOO-RISKY `schema.sql` refactor, which is a project-wide convention question and not in scope for an apply pass). No new dependencies, no breaking changes.
+
+### 1. Activity log now covers all entity CRUD writes (was AI-only)
+
+Extracted the inline `logActivity()` helper from `routes/ai.js` into a shared module so every entity router can use the same pattern:
+
+- **New:** `backend/lib/activityLog.js` — best-effort `logActivity(req, action, entity_type, entity_id, details)`. Swallows errors so a logging failure cannot break a user-visible write.
+
+Wired into every CRUD endpoint of the six main entities. Each POST/PUT/DELETE now emits one `activity_log` row:
+
+| Router | Actions emitted |
+|---|---|
+| `routes/projects.js` | `project.create`, `project.update`, `project.delete` |
+| `routes/hypotheses.js` | `hypothesis.create`, `hypothesis.update`, `hypothesis.delete` |
+| `routes/experiments.js` | `experiment.create`, `experiment.update`, `experiment.delete` |
+| `routes/results.js` | `result.create`, `result.update`, `result.delete` |
+| `routes/researchers.js` | `researcher.create`, `researcher.update`, `researcher.delete` |
+| `routes/publications.js` | `publication.create`, `publication.update`, `publication.delete` |
+
+Backwards-compatible: existing AI-tool `logActivity()` rows continue unchanged; no schema change needed (uses existing `activity_log` table).
+
+### 2. Pagination on `/api/activity` and `/api/search`
+
+Both endpoints now accept `offset` (in addition to the existing `limit`) and return a total count via the `X-Total-Count` response header. Backwards-compatible response shapes are preserved.
+
+- **`GET /api/activity`** — adds `offset` query param. Default response remains a plain array. New opt-in `paginated=1` returns `{ items, total, limit, offset }`. Action filter also upgraded from exact match to `ILIKE` substring for usability.
+- **`GET /api/search`** — adds `offset` query param. Response now includes a `pagination: { limit, offset, totals: { projects, hypotheses, ... }, grand_total }` block. Per-entity `totals` come from a `COUNT(*)` issued alongside each `SELECT … LIMIT/OFFSET`.
+
+Frontend wired through:
+
+- `frontend/src/components/ActivityPage.tsx` — Prev / Next buttons, "Showing N-M of TOTAL" counter, expanded entity-type filter dropdown (now includes hypothesis / researcher / publication / dataset / technology / topic).
+- `frontend/src/components/SearchPage.tsx` — Prev / Next pager, "Grand total / page offset" display, per-section `N of TOTAL` counts.
+- `frontend/src/api.ts` — `getActivity` and `search` gained `offset`; added new `getActivityPaginated()` client for the `{ items, total, limit, offset }` shape.
+
+### 3. Four new AI endpoints (close out the candidate list)
+
+Same `callAI()` + 503-stub + `logActivity()` pattern as the existing five apply-pass-3 tools. All JWT-protected.
+
+| Endpoint | Tile in AI Center | What it returns |
+|---|---|---|
+| `POST /api/ai/citation-network-insight` | "Citation Network Insight" | Hub papers, influential authors, emerging clusters, bridging papers, citation velocity, echo-chamber risks, suggested next reads |
+| `POST /api/ai/dataset-quality-assessor` | "Dataset Quality Assessor" | 0-10 quality score, completeness, provenance/licensing, bias, label quality, leakage, sanity checks, remediation, fit-for-use verdict |
+| `POST /api/ai/ip-patent-landscape` | "IP / Patent Landscape" | Top assignees, anchor patent families, claim-scope themes, white space, FTO risks, filing strategy. Includes "not legal advice" caveat. |
+| `POST /api/ai/anomaly-detector` | "Data Anomaly Detector" | Anomalies w/ severity, suspected causes, statistical outliers, integrity checks, distribution flags, batch/site effects, next tests, 0-10 severity score |
+
+Required-field 400 validation on the obvious anchor field of each (`topic`, `dataset_name`, `technology`, and `data_summary`-or-`experiment_id`). All five fields per tool exposed in the AI Center, plus **3 click-to-prefill samples per tool** with real-world R&D scenarios (CRISPR-Cas13 / AlphaFold / KRAS G12C; CASP15-IDR / SAbDab CDR-H3 / CodeBreaK 100; mRNA-LNP / CRISPR base editing / solid-state Li; MOF CO2 / argyrodite coin cells / qPCR Ct). Pattern matches the existing apply3 samples — 12 new prefill scenarios total.
+
+### Schema changes
+
+None. All four new endpoints reuse the existing `activity_log` table (already created with `CREATE INDEX IF NOT EXISTS` in `schema.sql`). No new tables required.
+
+### Files written / modified
+
+**New (1):**
+- `backend/lib/activityLog.js`
+
+**Modified (12):**
+- `backend/routes/projects.js` (logActivity on POST/PUT/DELETE)
+- `backend/routes/hypotheses.js` (logActivity on POST/PUT/DELETE)
+- `backend/routes/experiments.js` (logActivity on POST/PUT/DELETE)
+- `backend/routes/results.js` (logActivity on POST/PUT/DELETE)
+- `backend/routes/researchers.js` (logActivity on POST/PUT/DELETE)
+- `backend/routes/publications.js` (logActivity on POST/PUT/DELETE)
+- `backend/routes/activity.js` (offset + `paginated=1` + `X-Total-Count` + ILIKE action filter)
+- `backend/routes/search.js` (offset + per-entity totals + `X-Total-Count`)
+- `backend/routes/ai.js` (+ 4 new endpoints, ~110 LoC)
+- `frontend/src/api.ts` (4 new client methods + `offset` on getActivity/search + `getActivityPaginated`)
+- `frontend/src/components/AICenter.tsx` (4 tool tiles + 4 dispatch branches + 12 prefill samples, 4 new lucide icons)
+- `frontend/src/components/ActivityPage.tsx` (pagination controls + expanded entity filter)
+- `frontend/src/components/SearchPage.tsx` (pagination controls + per-entity totals)
+
+`backend/server.js` untouched — no new mounts needed (all AI endpoints land under the existing `/api/ai` mount).
+
+### Validation
+
+- `node --check` PASS on all 10 touched/created backend files: `lib/activityLog.js`, `routes/{projects,hypotheses,experiments,results,researchers,publications,activity,search,ai}.js`, and `server.js` (sanity).
+- `tsc --noEmit` clean for all 4 touched frontend files (`AICenter.tsx`, `ActivityPage.tsx`, `SearchPage.tsx`, `api.ts`). Pre-existing casing collisions in unrelated `CustomViews/`/`customViews/` directory pair are not introduced or affected by this pass.
+- 0 `npm install` runs, 0 new external dependencies.
+- No breaking changes: every existing client of `/api/activity` (array response) and `/api/search` (current `results` object) continues to work — pagination is purely additive (`offset` defaults to 0, new fields are added alongside, header is read-only).
+
+### Items intentionally skipped
+
+- **`schema.sql` non-destructive refactor** — TOO-RISKY per the original backlog. Project-wide convention requires owner sign-off, not an apply pass.

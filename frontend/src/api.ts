@@ -50,22 +50,39 @@ export const api = {
   replicationRiskScorer: (d: any) => request<any>('/ai/replication-risk-scorer', { method: 'POST', body: JSON.stringify(d) }),
   noveltyAssessor: (d: any) => request<any>('/ai/novelty-assessor', { method: 'POST', body: JSON.stringify(d) }),
   methodsCritic: (d: any) => request<any>('/ai/methods-critic', { method: 'POST', body: JSON.stringify(d) }),
+  // apply-pass-7 AI tools (full backlog)
+  citationNetworkInsight: (d: any) => request<any>('/ai/citation-network-insight', { method: 'POST', body: JSON.stringify(d) }),
+  datasetQualityAssessor: (d: any) => request<any>('/ai/dataset-quality-assessor', { method: 'POST', body: JSON.stringify(d) }),
+  ipPatentLandscape: (d: any) => request<any>('/ai/ip-patent-landscape', { method: 'POST', body: JSON.stringify(d) }),
+  anomalyDetector: (d: any) => request<any>('/ai/anomaly-detector', { method: 'POST', body: JSON.stringify(d) }),
   // utility
-  getActivity: (params?: { action?: string; entity_type?: string; limit?: number }) => {
+  getActivity: (params?: { action?: string; entity_type?: string; limit?: number; offset?: number }) => {
     const sp = new URLSearchParams();
     if (params?.action) sp.set('action', params.action);
     if (params?.entity_type) sp.set('entity_type', params.entity_type);
     if (params?.limit) sp.set('limit', String(params.limit));
+    if (params?.offset) sp.set('offset', String(params.offset));
     const qs = sp.toString();
     return request<any[]>(`/activity${qs ? `?${qs}` : ''}`);
   },
-  search: (params: { q: string; entity?: string; status?: string; domain?: string; limit?: number }) => {
+  // Paginated variant — returns { items, total, limit, offset }
+  getActivityPaginated: (params?: { action?: string; entity_type?: string; limit?: number; offset?: number }) => {
+    const sp = new URLSearchParams();
+    sp.set('paginated', '1');
+    if (params?.action) sp.set('action', params.action);
+    if (params?.entity_type) sp.set('entity_type', params.entity_type);
+    if (params?.limit) sp.set('limit', String(params.limit));
+    if (params?.offset) sp.set('offset', String(params.offset));
+    return request<{ items: any[]; total: number; limit: number; offset: number }>(`/activity?${sp.toString()}`);
+  },
+  search: (params: { q: string; entity?: string; status?: string; domain?: string; limit?: number; offset?: number }) => {
     const sp = new URLSearchParams();
     sp.set('q', params.q || '');
     if (params.entity) sp.set('entity', params.entity);
     if (params.status) sp.set('status', params.status);
     if (params.domain) sp.set('domain', params.domain);
     if (params.limit) sp.set('limit', String(params.limit));
+    if (params.offset) sp.set('offset', String(params.offset));
     return request<any>(`/search?${sp.toString()}`);
   },
   // sample-data (Dev Tools / Admin)

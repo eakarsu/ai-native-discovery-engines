@@ -20,6 +20,10 @@ import WebCrawl from './pages/WebCrawl';
 import BenchmarkEval from './pages/BenchmarkEval';
 import DiscoveryAgent from './pages/DiscoveryAgent';
 import CustomViewsPage from './pages/CustomViewsPage';
+import QueryDriftMonitor from './pages/QueryDriftMonitor';
+
+import CodexCustomVizFeature from './pages/CodexCustomVizFeature';
+import CodexOperationsFeature from './pages/CodexOperationsFeature';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const token = localStorage.getItem('token');
@@ -30,6 +34,9 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
+        <Route path="/codex/custom-viz" element={<CodexCustomVizFeature />} />
+        <Route path="/codex/operations" element={<CodexOperationsFeature />} />
+
         <Route path="/login" element={<Login />} />
         <Route path="/*" element={
           <PrivateRoute>
@@ -55,6 +62,7 @@ export default function App() {
                 <Route path="/benchmark-eval" element={<BenchmarkEval />} />
                 <Route path="/discovery-agent" element={<DiscoveryAgent />} />
                 <Route path="/custom-views" element={<CustomViewsPage />} />
+                <Route path="/query-drift-monitor" element={<QueryDriftMonitor />} />
               </Routes>
             </Layout>
           </PrivateRoute>

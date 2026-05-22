@@ -338,4 +338,122 @@ Provide a thorough critique:
   } catch (err) { aiError(res, err); }
 });
 
+// ---------- Apply pass 7: 4 additional AI endpoints from backlog ----------
+
+// 6) Citation network insight
+router.post('/citation-network-insight', async (req, res) => {
+  try {
+    const { topic, seed_papers, depth } = req.body;
+    if (!topic || !topic.trim()) return res.status(400).json({ error: 'topic is required' });
+    const prompt = `Generate a citation network insight report for the following research topic.
+
+Topic: ${topic}
+Seed papers / authors: ${seed_papers || '(none provided)'}
+Citation graph depth to consider: ${depth || '2-hop'}
+
+Provide:
+1. **Hub Papers** - 5-8 likely high-centrality papers in this network (with year, journal, authors)
+2. **Influential Authors** - 5-7 authors whose work anchors the citation graph
+3. **Emerging Clusters** - 3-5 sub-communities forming around new methods or datasets
+4. **Bridging Papers** - work that connects otherwise disconnected sub-fields
+5. **Citation Velocity** - which papers are accelerating vs decelerating in citations
+6. **Self-Citation / Echo-Chamber Risks** - groups that disproportionately cite each other
+7. **Suggested Next Reads** - 5 high-leverage papers to read next, ranked
+8. **Open Network Questions** - 3 questions a network analyst should investigate further`;
+    const result = await callAI(prompt, 'You are a scientometrics expert specializing in citation network analysis (Scopus, Web of Science, OpenAlex, Semantic Scholar). You map influence flow and emerging fronts in a literature.');
+    await logActivity(req, 'ai.citation-network-insight', 'topic', null, topic.slice(0, 200));
+    res.json({ result });
+  } catch (err) { aiError(res, err); }
+});
+
+// 7) Dataset quality assessor
+router.post('/dataset-quality-assessor', async (req, res) => {
+  try {
+    const { dataset_name, description, schema_summary, size, intended_use } = req.body;
+    if (!dataset_name || !dataset_name.trim()) return res.status(400).json({ error: 'dataset_name is required' });
+    const prompt = `Audit the quality of the following scientific dataset.
+
+Dataset name: ${dataset_name}
+Description: ${description || '(not provided)'}
+Schema summary: ${schema_summary || '(not provided)'}
+Approximate size: ${size || '(unknown)'}
+Intended downstream use: ${intended_use || '(unspecified)'}
+
+Return a structured quality audit:
+1. **Quality Score** - 0 (unusable) to 10 (gold-standard); justify
+2. **Completeness** - missingness, coverage gaps, expected vs observed cardinalities
+3. **Provenance & Licensing** - source clarity, license, terms of use red flags
+4. **Bias & Representativeness** - selection bias, demographic / geographic skews
+5. **Label Quality** - inter-annotator agreement, label noise, ontology drift
+6. **Leakage & Splits** - train/val/test leakage risks, temporal / patient / site splits
+7. **Statistical Sanity Checks** - outliers, duplicates, distributional shift between splits
+8. **Recommended Remediation** - prioritized concrete actions before downstream use
+9. **Suitability Verdict** - per intended_use: fit / fit-with-caveats / not-fit`;
+    const result = await callAI(prompt, 'You are a senior data engineer and ML reliability reviewer who audits scientific datasets for fitness-for-use before model training or publication.');
+    await logActivity(req, 'ai.dataset-quality-assessor', 'dataset', null, dataset_name.slice(0, 200));
+    res.json({ result });
+  } catch (err) { aiError(res, err); }
+});
+
+// 8) IP / patent landscape briefer
+router.post('/ip-patent-landscape', async (req, res) => {
+  try {
+    const { technology, jurisdictions, time_window, applicant_focus } = req.body;
+    if (!technology || !technology.trim()) return res.status(400).json({ error: 'technology is required' });
+    const prompt = `Produce a patent / IP landscape briefing for the following technology.
+
+Technology: ${technology}
+Jurisdictions: ${jurisdictions || 'US, EP, JP, CN (default major-five)'}
+Time window: ${time_window || 'last 10 years'}
+Applicant focus: ${applicant_focus || '(none specified — include top assignees)'}
+
+Provide an actionable briefing:
+1. **Landscape Summary** - 1-paragraph state of the IP front for this technology
+2. **Top Assignees** - 6-10 leading patent holders (corporate / academic) with rough share
+3. **Key Patent Families** - 6-8 anchor families with USPTO/EP-style ID examples
+4. **Claim-Scope Themes** - what's typically claimed (composition, method, apparatus, use)
+5. **White-Space Opportunities** - 3-5 plausible un-patented niches
+6. **Freedom-to-Operate Risks** - 3-5 patents most likely to block a new entrant
+7. **Likely Litigation Hotspots** - jurisdictions / claim types with elevated risk
+8. **Recommended Filing Strategy** - prioritized claim drafting + jurisdiction sequencing
+9. **Caveat** - this is an AI-generated briefing, not legal advice; recommend a patent attorney review`;
+    const result = await callAI(prompt, 'You are a patent landscape analyst with experience across USPTO, EPO, and WIPO databases. You map IP terrain for R&D and licensing strategy. Always flag when legal counsel is required.');
+    await logActivity(req, 'ai.ip-patent-landscape', 'technology', null, technology.slice(0, 200));
+    res.json({ result });
+  } catch (err) { aiError(res, err); }
+});
+
+// 9) Anomaly detector for experimental data
+router.post('/anomaly-detector', async (req, res) => {
+  try {
+    const { experiment_id, data_summary, expected_range, units } = req.body;
+    let extra = '';
+    if (experiment_id) {
+      const er = await pool.query('SELECT e.*, h.statement AS hyp FROM experiments e LEFT JOIN hypotheses h ON e.hypothesis_id = h.id WHERE e.id = $1', [experiment_id]);
+      if (er.rows.length) {
+        const e = er.rows[0];
+        extra = `Stored Experiment Title: ${e.title}\nStored Hypothesis: ${e.hyp}\nStored Methodology: ${e.methodology}\nStored Result Summary: ${e.result_summary}\n`;
+      }
+    }
+    if (!data_summary && !extra) return res.status(400).json({ error: 'data_summary or experiment_id with stored data is required' });
+    const prompt = `Scan the following experimental data for anomalies and integrity issues.
+
+${extra}Data summary / sample: ${data_summary || '(see above)'}
+Expected range / units: ${expected_range || '(unspecified)'} / ${units || '(unspecified)'}
+
+Return a structured anomaly report:
+1. **Anomalies Found** - bulleted list with severity (low / med / high) and where each appears
+2. **Suspected Causes** - instrument drift, contamination, transcription error, batch effect, fraud risk
+3. **Statistical Outliers** - IQR / z-score / Tukey-fence calls if applicable
+4. **Data Integrity Checks** - duplicates, identical sequences, impossible values, unit mismatches
+5. **Distribution Shape Flags** - bimodality, truncation, ceiling/floor effects
+6. **Batch / Site Effects** - signs of confounding by batch, day, operator, plate
+7. **Recommended Next Tests** - exact diagnostics to confirm or rule out each anomaly
+8. **Severity Score** - overall 0 (clean) to 10 (do-not-publish-until-resolved)`;
+    const result = await callAI(prompt, 'You are a data integrity reviewer for a scientific journal. You catch anomalies, batch effects, and image / numeric inconsistencies that human reviewers often miss.');
+    await logActivity(req, 'ai.anomaly-detector', 'experiment', experiment_id || null, (data_summary || '').slice(0, 200));
+    res.json({ result });
+  } catch (err) { aiError(res, err); }
+});
+
 module.exports = router;

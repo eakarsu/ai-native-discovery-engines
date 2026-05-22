@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../db');
 const verifyToken = require("../middleware/auth");
+const { logActivity } = require('../lib/activityLog');
 router.use(verifyToken);
 router.get('/', async (req, res) => {
   try {
@@ -20,6 +21,7 @@ router.post('/', async (req, res) => {
   try {
     const { experiment_id, outcome, significance_pct, breakthrough, data_summary, conclusion, published, published_at } = req.body;
     const r = await pool.query('INSERT INTO results (experiment_id,outcome,significance_pct,breakthrough,data_summary,conclusion,published,published_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *', [experiment_id,outcome,significance_pct,breakthrough||false,data_summary,conclusion,published||false,published_at]);
+    await logActivity(req, 'result.create', 'result', r.rows[0].id, conclusion || outcome);
     res.status(201).json(r.rows[0]);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -28,11 +30,16 @@ router.put('/:id', async (req, res) => {
     const { experiment_id, outcome, significance_pct, breakthrough, data_summary, conclusion, published, published_at } = req.body;
     const r = await pool.query('UPDATE results SET experiment_id=$1,outcome=$2,significance_pct=$3,breakthrough=$4,data_summary=$5,conclusion=$6,published=$7,published_at=$8 WHERE id=$9 RETURNING *', [experiment_id,outcome,significance_pct,breakthrough,data_summary,conclusion,published,published_at,req.params.id]);
     if (!r.rows.length) return res.status(404).json({ error: 'Not found' });
+    await logActivity(req, 'result.update', 'result', r.rows[0].id, conclusion || outcome);
     res.json(r.rows[0]);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 router.delete('/:id', async (req, res) => {
-  try { await pool.query('DELETE FROM results WHERE id=$1', [req.params.id]); res.json({ success: true }); }
+  try {
+    await pool.query('DELETE FROM results WHERE id=$1', [req.params.id]);
+    await logActivity(req, 'result.delete', 'result', parseInt(req.params.id, 10) || null, null);
+    res.json({ success: true });
+  }
   catch (err) { res.status(500).json({ error: err.message }); }
 });
 module.exports = router;
