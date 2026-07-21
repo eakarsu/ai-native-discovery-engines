@@ -41,7 +41,6 @@ secrets.yaml
 # --- secrets (auto-added) ---
 .env
 .env.*
-!.env.example
 *.pem
 *.key
 **/credentials*.json
@@ -60,3 +59,4 @@ token.txt
 id_rsa*
 **/credentials*.json
 **/serviceAccount*.json
+!.env.example

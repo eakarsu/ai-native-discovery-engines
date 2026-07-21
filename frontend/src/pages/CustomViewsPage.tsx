@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { Compass, BarChart3, Grid3x3, FileDown, Settings2 } from 'lucide-react';
-import QueryFrequencyChart from '../components/CustomViews/QueryFrequencyChart';
-import RelevanceHeatmap from '../components/CustomViews/RelevanceHeatmap';
-import IndexConfigPdfExport from '../components/CustomViews/IndexConfigPdfExport';
-import RankingRulesEditor from '../components/CustomViews/RankingRulesEditor';
+import QueryFrequencyChart from '../components/customViews/QueryFrequencyChart';
+import RelevanceHeatmap from '../components/customViews/RelevanceHeatmap';
+import IndexConfigPdfExport from '../components/customViews/IndexConfigPdfExport';
+import RankingRulesEditor from '../components/customViews/RankingRulesEditor';
 
 type TabId = 'qf' | 'heatmap' | 'pdf' | 'rules';
 
