@@ -8,9 +8,11 @@ async function main() {
   const password = process.env.PROVISION_ADMIN_PASSWORD || '';
   const name = String(process.env.PROVISION_ADMIN_NAME || 'Initial Administrator').trim();
   if (!email || password.length < 12) throw new Error('Administrator email and a password of at least 12 characters are required');
-  const existing = await pool.query('SELECT 1 FROM users WHERE lower(email)=lower($1)', [email]);
-  if (existing.rowCount) throw new Error(`Refusing to overwrite existing account ${email}`);
-  await pool.query('INSERT INTO users(email,password_hash,name,role) VALUES($1,$2,$3,$4)', [email, await bcrypt.hash(password, 12), name, 'admin']);
+  await pool.query(
+    `INSERT INTO users(email,password_hash,name,role) VALUES($1,$2,$3,'admin')
+     ON CONFLICT(email) DO UPDATE SET password_hash=EXCLUDED.password_hash,name=EXCLUDED.name,role='admin'`,
+    [email, await bcrypt.hash(password, 12), name],
+  );
   console.log(`Provisioned initial administrator ${email}`);
 }
 

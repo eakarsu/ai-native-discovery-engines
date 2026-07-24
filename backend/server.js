@@ -9,6 +9,7 @@ app.use(cors({ origin: allowedOrigins, credentials: true }));
 app.use(express.json({ limit: '1mb' }));
 
 app.use('/api/auth', require('./routes/auth'));
+app.use('/api/runtime-ai', require('./routes/runtime-ai'));
 app.use('/api/governed-discovery', require('./routes/governedDiscovery'));
 
 app.get('/api/health/live', (_req, res) => res.json({ status: 'ok' }));
