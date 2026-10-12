@@ -1,0 +1,114 @@
+[
+  {
+    "name": "CfAutoAuthorship",
+    "id": "cf-auto-authorship",
+    "title": "Auto-Claimed Authorship Drafts",
+    "description": "Prepare a professional advisory report for auto-claimed authorship drafts using the brief and evidence you provide. Review the findings, assumptions, and action plan before applying changes.",
+    "samples": []
+  },
+  {
+    "name": "CfCrossLabFederation",
+    "id": "cf-cross-lab-federation",
+    "title": "Cross-Lab Federation",
+    "description": "Prepare a professional advisory report for cross-lab federation using the brief and evidence you provide. Review the findings, assumptions, and action plan before applying changes.",
+    "samples": []
+  },
+  {
+    "name": "CfElnExport",
+    "id": "cf-eln-export",
+    "title": "ELN Format Export",
+    "description": "Prepare a professional advisory report for eln format export using the brief and evidence you provide. Review the findings, assumptions, and action plan before applying changes.",
+    "samples": []
+  },
+  {
+    "name": "CfLabRobotics",
+    "id": "cf-lab-robotics",
+    "title": "Lab Robotics Integration",
+    "description": "Prepare a professional advisory report for lab robotics integration using the brief and evidence you provide. Review the findings, assumptions, and action plan before applying changes.",
+    "samples": []
+  },
+  {
+    "name": "CfSelfDrivingLab",
+    "id": "cf-self-driving-lab",
+    "title": "Self-Driving Lab Loop",
+    "description": "Prepare a professional advisory report for self-driving lab loop using the brief and evidence you provide. Review the findings, assumptions, and action plan before applying changes.",
+    "samples": []
+  },
+  {
+    "name": "GapAutoIterateLoop",
+    "id": "gap-ai-auto-iterate-loop",
+    "title": "Auto-Iterate Hypothesis Loop",
+    "description": "Prepare a professional advisory report for auto-iterate hypothesis loop using the brief and evidence you provide. Review the findings, assumptions, and action plan before applying changes.",
+    "samples": []
+  },
+  {
+    "name": "GapCitationImpactPredictor",
+    "id": "gap-ai-citation-impact-predictor",
+    "title": "Citation Impact Predictor",
+    "description": "Prepare a professional advisory report for citation impact predictor using the brief and evidence you provide. Review the findings, assumptions, and action plan before applying changes.",
+    "samples": []
+  },
+  {
+    "name": "GapDoiConnector",
+    "id": "gap-nonai-doi-connector",
+    "title": "DOI / External Publication API",
+    "description": "Prepare a professional advisory report for doi / external publication api using the brief and evidence you provide. Review the findings, assumptions, and action plan before applying changes.",
+    "samples": []
+  },
+  {
+    "name": "GapHypothesisComments",
+    "id": "gap-nonai-hypothesis-comments",
+    "title": "Hypothesis Comments / Threads",
+    "description": "Prepare a professional advisory report for hypothesis comments / threads using the brief and evidence you provide. Review the findings, assumptions, and action plan before applying changes.",
+    "samples": []
+  },
+  {
+    "name": "GapLabEquipment",
+    "id": "gap-nonai-lab-equipment",
+    "title": "Lab Equipment Registry",
+    "description": "Prepare a professional advisory report for lab equipment registry using the brief and evidence you provide. Review the findings, assumptions, and action plan before applying changes.",
+    "samples": []
+  },
+  {
+    "name": "GapProtocolOptimizer",
+    "id": "gap-ai-protocol-optimizer",
+    "title": "Protocol Optimizer",
+    "description": "Prepare a professional advisory report for protocol optimizer using the brief and evidence you provide. Review the findings, assumptions, and action plan before applying changes.",
+    "samples": []
+  },
+  {
+    "name": "GapProtocolVersioning",
+    "id": "gap-nonai-protocol-versioning",
+    "title": "Protocol Versioning",
+    "description": "Prepare a professional advisory report for protocol versioning using the brief and evidence you provide. Review the findings, assumptions, and action plan before applying changes.",
+    "samples": []
+  },
+  {
+    "name": "GapRawDataUploads",
+    "id": "gap-nonai-raw-data-uploads",
+    "title": "Raw Data File Attachments",
+    "description": "Prepare a professional advisory report for raw data file attachments using the brief and evidence you provide. Review the findings, assumptions, and action plan before applying changes.",
+    "samples": []
+  },
+  {
+    "name": "GapReproducibilityPackage",
+    "id": "gap-nonai-reproducibility-package",
+    "title": "Reproducibility Package Export",
+    "description": "Prepare a professional advisory report for reproducibility package export using the brief and evidence you provide. Review the findings, assumptions, and action plan before applying changes.",
+    "samples": []
+  },
+  {
+    "name": "GapResultSignificanceTest",
+    "id": "gap-ai-result-significance-test",
+    "title": "Result Significance Test Assistant",
+    "description": "Prepare a professional advisory report for result significance test assistant using the brief and evidence you provide. Review the findings, assumptions, and action plan before applying changes.",
+    "samples": []
+  },
+  {
+    "name": "GapTeamCompositionOptimizer",
+    "id": "gap-ai-team-composition-optimizer",
+    "title": "Team Composition Optimizer",
+    "description": "Prepare a professional advisory report for team composition optimizer using the brief and evidence you provide. Review the findings, assumptions, and action plan before applying changes.",
+    "samples": []
+  }
+]

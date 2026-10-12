@@ -25,6 +25,14 @@ app.get('/api/health/ready', async (_req, res) => {
 // Unscoped CRUD, demo data, simulated benchmarks, generic-model actions, and
 // generated gap/visualization routes are intentionally outside the supported
 // product boundary. Keep a deterministic tombstone instead of silent success.
+
+// Advisory AI reports only; native execution and approval routes stay unchanged.
+const aiWorkspaceSupport = require("./aiWorkspaceAdapters.cjs");
+const aiWorkspaceDatabase = require("./db.js");
+app.use('/api/report-workspace', require("./aiWorkspace.cjs").createAIWorkspaceRouter({
+  pool: aiWorkspaceDatabase, authenticateToken: require("./middleware/auth.js"),
+  aiRateLimiter: aiWorkspaceSupport.createWorkspaceLimiter(), features: require("./aiWorkspaceFeatures.json"),
+}));
 app.use('/api', (_req, res) => res.status(410).json({
   error: 'Legacy/generated surface retired; use /api/governed-discovery',
 }));

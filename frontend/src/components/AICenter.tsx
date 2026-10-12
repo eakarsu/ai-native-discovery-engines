@@ -5,8 +5,9 @@ import AIResponse from './AIResponse';
 
 type Sample = { label: string; values: Record<string, string> };
 type Tool = { id: string; title: string; description: string; icon: any; color: string; fields: { key: string; label: string; type: string; placeholder: string }[]; samples?: Sample[] };
+type RecentAIResult = { toolId: string; title: string; content: unknown; timestamp: Date };
 
-const tools: Tool[] = [
+export const tools: Tool[] = [
   { id: 'generate-hypothesis', title: 'Generate Hypothesis', description: 'Generate novel, testable hypotheses for research projects using AI.', icon: FlaskConical, color: 'bg-violet-100 text-violet-600', fields: [{ key: 'project_id', label: 'Project ID', type: 'number', placeholder: '1' }, { key: 'domain', label: 'Research Domain', type: 'text', placeholder: 'oncology' }],
     samples: [
       { label: 'CRISPR-Cas13 dx', values: { project_id: '1', domain: 'molecular diagnostics — CRISPR-Cas13a SHERLOCK' } },
@@ -75,9 +76,9 @@ const tools: Tool[] = [
     ] },
   { id: 'anomaly-detector', title: 'Data Anomaly Detector', description: 'Scan experimental data for outliers, batch effects, integrity issues, and pre-publication red flags.', icon: AlertTriangle, color: 'bg-orange-100 text-orange-600', fields: [{ key: 'experiment_id', label: 'Experiment ID (optional)', type: 'number', placeholder: '1' }, { key: 'data_summary', label: 'Data Summary', type: 'text', placeholder: 'Means, SDs, N per group, raw outliers' }, { key: 'expected_range', label: 'Expected Range', type: 'text', placeholder: '0.5 - 2.5' }, { key: 'units', label: 'Units', type: 'text', placeholder: 'mmol/g' }],
     samples: [
-      { label: 'MOF CO2 uptake', values: { experiment_id: '', data_summary: 'CO2 uptake by mmen-Mg2(dobpdc) MOF over 1000 humid TSA cycles, n=12 batches. Means: B1-B11 = 2.05-2.18 mmol/g; B12 = 0.41 mmol/g. SD within batch = 0.04 mmol/g except B12 (SD=0.31). No instrument recalibration logged between B11 and B12.', expected_range: '2.0 - 2.3', units: 'mmol/g' } },
-      { label: 'Coin-cell cycles', values: { experiment_id: '', data_summary: 'Li6PS5Cl + LiF coin cells, n=12 per arm, 1C cycling at 25°C. Capacity retention at cycle 800: 84%, 86%, 85%, 83%, 87%, 85%, 21%, 22%, 86%, 84%, 82%, 85%. Two cells (#7, #8) crashed identically at cycle 412.', expected_range: '80 - 90', units: '% retention' } },
-      { label: 'qPCR Ct', values: { experiment_id: '', data_summary: 'qPCR Ct values for ORF1ab across 96-well plate, 3 plates (n=288). Plate 1 mean Ct = 24.1 (SD 1.2), Plate 2 mean Ct = 24.3 (SD 1.3), Plate 3 mean Ct = 19.8 (SD 0.6). Operator changed between plates 2 and 3; no NTC reported for plate 3.', expected_range: '20 - 28', units: 'Ct cycles' } },
+      { label: 'MOF CO2 uptake', values: { experiment_id: '1', data_summary: 'CO2 uptake by mmen-Mg2(dobpdc) MOF over 1000 humid TSA cycles, n=12 batches. Means: B1-B11 = 2.05-2.18 mmol/g; B12 = 0.41 mmol/g. SD within batch = 0.04 mmol/g except B12 (SD=0.31). No instrument recalibration logged between B11 and B12.', expected_range: '2.0 - 2.3', units: 'mmol/g' } },
+      { label: 'Coin-cell cycles', values: { experiment_id: '2', data_summary: 'Li6PS5Cl + LiF coin cells, n=12 per arm, 1C cycling at 25°C. Capacity retention at cycle 800: 84%, 86%, 85%, 83%, 87%, 85%, 21%, 22%, 86%, 84%, 82%, 85%. Two cells (#7, #8) crashed identically at cycle 412.', expected_range: '80 - 90', units: '% retention' } },
+      { label: 'qPCR Ct', values: { experiment_id: '3', data_summary: 'qPCR Ct values for ORF1ab across 96-well plate, 3 plates (n=288). Plate 1 mean Ct = 24.1 (SD 1.2), Plate 2 mean Ct = 24.3 (SD 1.3), Plate 3 mean Ct = 19.8 (SD 0.6). Operator changed between plates 2 and 3; no NTC reported for plate 3.', expected_range: '20 - 28', units: 'Ct cycles' } },
     ] },
   { id: 'methods-critic', title: 'Methods Critic', description: 'Peer-review critique of a methods section for reproducibility and rigor.', icon: ClipboardCheck, color: 'bg-cyan-100 text-cyan-600', fields: [{ key: 'domain', label: 'Domain', type: 'text', placeholder: 'oncology' }, { key: 'study_type', label: 'Study Type', type: 'text', placeholder: 'RCT / observational / computational' }, { key: 'methods', label: 'Methods Text', type: 'text', placeholder: 'Paste the methods section...' }],
     samples: [
@@ -90,11 +91,14 @@ const tools: Tool[] = [
 export default function AICenter() {
   const [formValues, setFormValues] = useState<Record<string, Record<string, string>>>({});
   const [loadingTool, setLoadingTool] = useState<string | null>(null);
-  const [results, setResults] = useState<Record<string, string>>({});
-  const [history, setHistory] = useState<any[]>([]);
+  const [results, setResults] = useState<Record<string, unknown>>({});
+  const [history, setHistory] = useState<RecentAIResult[]>([]);
 
   const setField = (toolId: string, key: string, value: string) => setFormValues(prev => ({ ...prev, [toolId]: { ...(prev[toolId] || {}), [key]: value } }));
-  const applySample = (toolId: string, values: Record<string, string>) => setFormValues(prev => ({ ...prev, [toolId]: { ...values } }));
+  const applySample = (tool: Tool, values: Record<string, string>) => {
+    const completeValues = Object.fromEntries(tool.fields.map(field => [field.key, values[field.key] || field.placeholder]));
+    setFormValues(prev => ({ ...prev, [tool.id]: completeValues }));
+  };
 
   const runTool = async (tool: typeof tools[0]) => {
     setLoadingTool(tool.id); setResults(prev => ({ ...prev, [tool.id]: '' }));
@@ -130,31 +134,44 @@ export default function AICenter() {
           const result = results[tool.id];
           const values = formValues[tool.id] || {};
           return (
-            <div key={tool.id} className="bg-white rounded-xl border border-gray-200 p-6">
+            <div key={tool.id} data-ai-tool={tool.id} className="bg-white rounded-xl border border-gray-200 p-6">
               <div className="flex items-start gap-3 mb-4"><div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${tool.color}`}><Icon className="w-5 h-5" /></div><div><h3 className="font-bold text-gray-900">{tool.title}</h3><p className="text-sm text-gray-500 mt-0.5">{tool.description}</p></div></div>
               {tool.samples && tool.samples.length > 0 && (
                 <div className="mb-3">
-                  <div className="text-xs font-medium text-gray-500 mb-1.5">Try a sample:</div>
+                  <div className="text-xs font-medium text-gray-500 mb-1.5">Try a complete example (fills required and optional fields):</div>
                   <div className="flex flex-wrap gap-1.5">
                     {tool.samples.map((s, idx) => (
-                      <button key={idx} type="button" onClick={() => applySample(tool.id, s.values)} className="text-xs px-2.5 py-1 rounded-md bg-gray-100 hover:bg-violet-100 text-gray-700 hover:text-violet-700 border border-gray-200 transition-colors">{s.label}</button>
+                      <button key={idx} type="button" data-ai-preset={idx} onClick={() => applySample(tool, s.values)} className="text-xs px-2.5 py-1 rounded-md bg-gray-100 hover:bg-violet-100 text-gray-700 hover:text-violet-700 border border-gray-200 transition-colors">{s.label}</button>
                     ))}
                   </div>
                 </div>
               )}
               <div className="space-y-3 mb-4">
                 {tool.fields.map(field => (
-                  <div key={field.key}><label className="block text-xs font-medium text-gray-600 mb-1">{field.label}</label><input type={field.type} value={values[field.key]||''} onChange={e => setField(tool.id, field.key, e.target.value)} placeholder={field.placeholder} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-violet-500 outline-none" /></div>
+                  <div key={field.key}><label className="block text-xs font-medium text-gray-600 mb-1">{field.label}</label><input data-ai-field={field.key} type={field.type} value={values[field.key]||''} onChange={e => setField(tool.id, field.key, e.target.value)} placeholder={field.placeholder} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-violet-500 outline-none" /></div>
                 ))}
               </div>
               <button onClick={() => runTool(tool)} disabled={isLoading} className="w-full flex items-center justify-center gap-2 bg-violet-600 hover:bg-violet-700 disabled:opacity-50 text-white py-2.5 rounded-lg font-medium text-sm transition-colors mb-4"><Sparkles className="w-4 h-4" />{isLoading ? 'Generating...' : 'Generate'}</button>
-              {(isLoading || result) && <AIResponse content={result} title={tool.title} isLoading={isLoading} onRegenerate={() => runTool(tool)} />}
+              {(isLoading || (result !== undefined && result !== '')) && <AIResponse content={result} title={tool.title} isLoading={isLoading} onRegenerate={() => runTool(tool)} />}
             </div>
           );
         })}
       </div>
       {history.length > 0 && (
-        <div className="mt-8"><h3 className="font-bold text-gray-900 mb-4">Recent Queries</h3><div className="space-y-3">{history.map((item, i) => (<div key={i} className="bg-white rounded-xl border border-gray-200 p-4"><div className="flex items-center justify-between mb-2"><span className="font-medium text-sm text-gray-900">{item.title}</span><span className="text-xs text-gray-400">{item.timestamp.toLocaleTimeString()}</span></div><p className="text-sm text-gray-600 line-clamp-2">{item.content.slice(0,150)}...</p></div>))}</div></div>
+        <div className="mt-8">
+          <h3 className="font-bold text-gray-900 mb-4">Recent AI results</h3>
+          <div className="space-y-3">
+            {history.map((item, index) => (
+              <details key={`${item.toolId}-${item.timestamp.getTime()}-${index}`} className="bg-white rounded-xl border border-gray-200 p-4">
+                <summary className="cursor-pointer flex items-center justify-between gap-3">
+                  <span className="font-medium text-sm text-gray-900">{item.title}</span>
+                  <span className="text-xs text-gray-400">{item.timestamp.toLocaleTimeString()}</span>
+                </summary>
+                <AIResponse content={item.content} title={item.title} isLoading={false} />
+              </details>
+            ))}
+          </div>
+        </div>
       )}
     </div>
   );

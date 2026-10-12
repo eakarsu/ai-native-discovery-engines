@@ -9,6 +9,9 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const demoEmail = import.meta.env.VITE_DEMO_EMAIL || '';
+  const demoPassword = import.meta.env.VITE_DEMO_PASSWORD || '';
+  const demoAvailable = import.meta.env.VITE_ENABLE_DEMO_CREDENTIAL_AUTOFILL !== 'false' && Boolean(demoEmail && demoPassword);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault(); setError(''); setLoading(true);
@@ -21,9 +24,6 @@ export default function Login() {
     finally { setLoading(false); }
   };
 
-  const demoLogin = () => {
-    setEmail(import.meta.env.VITE_DEMO_EMAIL || ''); setPassword(import.meta.env.VITE_DEMO_PASSWORD || '');
-  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-950 via-indigo-900 to-violet-900 flex items-center justify-center p-4">
@@ -52,9 +52,17 @@ export default function Login() {
               {loading ? 'Signing in...' : 'Sign In'}
             </button>
           </form>
-          <div className="mt-4">
-            <button onClick={demoLogin} className="w-full border border-indigo-300 text-indigo-700 hover:bg-indigo-50 font-medium py-2.5 rounded-lg text-sm transition-colors">Auto Fill Demo Credentials</button>
-          </div>
+          {demoAvailable && (
+            <div className="mt-4">
+              <button
+                type="button"
+                onClick={() => { setEmail(demoEmail); setPassword(demoPassword); setError(''); }}
+                className="w-full border border-indigo-300 text-indigo-700 hover:bg-indigo-50 font-medium py-2.5 rounded-lg text-sm transition-colors"
+              >
+                Fill Demo Credentials
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>
