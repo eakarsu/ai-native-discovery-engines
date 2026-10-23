@@ -29,6 +29,7 @@ app.get('/api/health/ready', async (_req, res) => {
 // Advisory AI reports only; native execution and approval routes stay unchanged.
 const aiWorkspaceSupport = require("./aiWorkspaceAdapters.cjs");
 const aiWorkspaceDatabase = require("./db.js");
+app.use('/api/wave', require('./routes/wave60c'));
 app.use('/api/report-workspace', require("./aiWorkspace.cjs").createAIWorkspaceRouter({
   pool: aiWorkspaceDatabase, authenticateToken: require("./middleware/auth.js"),
   aiRateLimiter: aiWorkspaceSupport.createWorkspaceLimiter(), features: require("./aiWorkspaceFeatures.json"),

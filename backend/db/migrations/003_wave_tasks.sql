@@ -1,0 +1,12 @@
+CREATE TABLE IF NOT EXISTS staff_tasks(
+  id BIGSERIAL PRIMARY KEY,
+  title TEXT NOT NULL,
+  description TEXT,
+  status TEXT NOT NULL DEFAULT 'OPEN',
+  priority TEXT NOT NULL DEFAULT 'NORMAL',
+  due_at TIMESTAMPTZ,
+  completed_at TIMESTAMPTZ,
+  created_by BIGINT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);

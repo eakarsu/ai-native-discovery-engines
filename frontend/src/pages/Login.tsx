@@ -13,15 +13,26 @@ export default function Login() {
   const demoPassword = import.meta.env.VITE_DEMO_PASSWORD || '';
   const demoAvailable = import.meta.env.VITE_ENABLE_DEMO_CREDENTIAL_AUTOFILL !== 'false' && Boolean(demoEmail && demoPassword);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault(); setError(''); setLoading(true);
+  const submitLogin = async (loginEmail: string, loginPassword: string) => {
+    setError(''); setLoading(true);
     try {
-      const { token, user } = await api.login(email, password);
+      const { token, user } = await api.login(loginEmail, loginPassword);
       localStorage.setItem('token', token);
       localStorage.setItem('user', JSON.stringify(user));
       navigate('/');
     } catch (err: any) { setError(err.message || 'Login failed'); }
     finally { setLoading(false); }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await submitLogin(email, password);
+  };
+
+  const handleDemoLogin = async () => {
+    setEmail(demoEmail);
+    setPassword(demoPassword);
+    await submitLogin(demoEmail, demoPassword);
   };
 
 
@@ -56,7 +67,8 @@ export default function Login() {
             <div className="mt-4">
               <button
                 type="button"
-                onClick={() => { setEmail(demoEmail); setPassword(demoPassword); setError(''); }}
+                disabled={loading}
+                onClick={() => void handleDemoLogin()}
                 className="w-full border border-indigo-300 text-indigo-700 hover:bg-indigo-50 font-medium py-2.5 rounded-lg text-sm transition-colors"
               >
                 Fill Demo Credentials
